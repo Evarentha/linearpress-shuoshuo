@@ -1,0 +1,8 @@
+<!--
+  Author: MoyuZJ
+  Team: LinearTeam
+  Contact: linearteam@foxmail.com
+  Made by MoyuZJ in China with ♥
+-->
+
+<div class="page-head"><h1>说说</h1><a class="button" href="/admin/shuoshuo/new">+ 发一条</a></div><% if (notice === 'saved') { %><p class="notice">说说已保存。</p><% } else if (notice === 'deleted') { %><p class="notice">说说已删除。</p><% } %><table><thead><tr><th>内容</th><th>状态</th><th>作者</th><th>发布时间</th><th>操作</th></tr></thead><tbody><% if (items.length === 0) { %><tr><td colspan="5" class="empty">还没有说说，点右上角「+ 发一条」开始吧。</td></tr><% } items.forEach(item => { %><tr><td class="shuoshuo-cell"><%- shuoshuoHtml(item) %></td><td><%= item.status %></td><td><%= item.author_name %></td><td><%= formatDate(item.created_at) %></td><td><a href="/admin/shuoshuo/<%= item.id %>/edit">编辑</a> <form class="inline" method="post" action="/admin/shuoshuo/<%= item.id %>/delete"><button>删除</button></form></td></tr><% }) %></tbody></table>

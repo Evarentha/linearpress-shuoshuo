@@ -1,0 +1,37 @@
+<%
+/*
+ * Author: MoyuZJ
+ * Team: LinearTeam
+ * Contact: linearteam@foxmail.com
+ * Made by MoyuZJ in China with ♥
+ */
+%>
+
+<div class="shuoshuo-editor-page" data-shuoshuo-editor data-cloud-saved-at="<%= Number(cloudSavedAt) || 0 %>">
+  <form id="shuoshuo-form" method="post" action="/admin/shuoshuo/save">
+    <input type="hidden" name="id" value="<%= shuoshuo?.id ?? '' %>">
+    <input type="hidden" name="slug" value="<%= slug %>">
+    <input type="hidden" name="content_json" id="shuoshuo-content-json">
+    <select name="status" data-shuoshuo-status hidden>
+      <option value="draft" <%= status === 'draft' ? 'selected' : '' %>>草稿</option>
+      <option value="published" <%= status === 'published' ? 'selected' : '' %>>发布</option>
+      <option value="archived" <%= status === 'archived' ? 'selected' : '' %>>归档</option>
+    </select>
+    <header class="shuoshuo-topbar">
+      <div class="shuoshuo-topbar-left"><a class="shuoshuo-back" href="/admin/shuoshuo" aria-label="返回说说列表">←</a><span class="shuoshuo-save-status" data-shuoshuo-save-status>未保存</span></div>
+      <div class="shuoshuo-actions">
+        <button type="button" class="shuoshuo-draft-button" data-shuoshuo-draft title="保存草稿">↥ 存草稿</button>
+        <button type="button" class="shuoshuo-publish-button" data-shuoshuo-publish><%= shuoshuo ? '保存发布' : '发布' %> →</button>
+      </div>
+    </header>
+    <main class="shuoshuo-canvas">
+      <div class="shuoshuo-compose" data-shuoshuo-compose>
+        <p class="shuoshuo-editable" contenteditable="true" data-shuoshuo-editable spellcheck="true" data-placeholder="这一刻的想法…"></p>
+      </div>
+      <div class="shuoshuo-meta-row">
+        <span>只支持一个段落</span><span>·</span><span>固定链接已保留</span><span>·</span><span>分享时直接复制这段话</span>
+      </div>
+    </main>
+  </form>
+</div>
+<script>window.SHUOSHUO_INITIAL = <%- JSON.stringify(initialHtml ?? '').replace(/</g, '\\u003c') %>;</script>
