@@ -40,7 +40,7 @@ LinearPress 的一种只有一段话的文章类型：**没有标题、没有阅
 cd base && sh scripts/sync-plugins.sh shuoshuo
 
 # Option 2 — clone into runtime dir（目录名必须等于插件 id）
-git clone https://github.com/Averithen/linearpress-shuoshuo src/plugins/shuoshuo
+git clone https://github.com/Evarentha/linearpress-shuoshuo src/plugins/shuoshuo
 ```
 
 Restart LinearPress to discover and enable; or install via admin ZIP upload. / 重启自动发现启用；也可 ZIP 安装。
@@ -48,7 +48,7 @@ Restart LinearPress to discover and enable; or install via admin ZIP upload. / �
 ## Local Development / 本地开发：怎么拉 / 怎么改 / 怎么跑
 
 ```bash
-git clone https://github.com/Averithen/linearpress-shuoshuo LinearPress/Plugins/shuoshuo
+git clone https://github.com/Evarentha/linearpress-shuoshuo LinearPress/Plugins/shuoshuo
 cd LinearPress/base
 npm install && npm run db:init
 sh scripts/sync-plugins.sh shuoshuo
