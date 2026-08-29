@@ -5,75 +5,75 @@
   Made by MoyuZJ in China with ♥
 -->
 
-# 说说（shuoshuo）
+# 说说 · Shuoshuo
 
-一种只有一段话的文章类型：**没有标题、没有阅读页**，整段内容直接出现在首页文章列表中，
-是分享灵光一现时刻的轻量发布方式。
+A one-paragraph post type for LinearPress: **no title, no reading page** — the whole content appears directly on the home page list. A lightweight way to share fleeting thoughts.
 
-> 本仓库是 LinearPress 插件 **shuoshuo** 的独立开发仓库。插件即 Cordis 插件函数，即插即用、可停用可卸载。
+LinearPress 的一种只有一段话的文章类型：**没有标题、没有阅读页**，整段内容直接出现在首页文章列表中，是分享灵光一现时刻的轻量发布方式。
 
-## 插件化的优势
+> Independent plugin repository for LinearPress **shuoshuo**. A plugin is a Cordis plugin function — install on demand, disable/uninstall cleanly.
+> 本仓库是 LinearPress 插件 **shuoshuo** 的独立仓库。
 
-- **给文章系统加类型不 fork 核心**：复用 `posts` 表，用一个钩子（`post:beforeSave`）+ 视图覆盖就为整站新增了一种内容形态。
-- **与可视化编辑器互不干扰**：存储格式兼容 modern-editor 的 block 结构，两者可互相打开编辑；本插件不替换 `ctx.posts`。
-- **卸载干净**：停用后首页视图回到默认列表，普通文章照常发布，无任何残留表结构迁移。
+## Why Plugins? / 插件化的优势
 
-## 功能
+- **Add a content type without forking core** —— reuses the `posts` table; a hook（`post:beforeSave`）plus a view override adds a whole new content form.
+  **给文章系统加类型不 fork 核心**——复用 `posts` 表，靠一个钩子 + 视图覆盖就新增了一种内容形态。
+- **Coexists with the visual editor** —— storage format is compatible with modern-editor's block structure; both can open/edit interchangeably; `ctx.posts` is never replaced.
+  **与可视化编辑器互不干扰**——存储格式兼容 modern-editor 的 block 结构；不替换 `ctx.posts`。
+- **Clean uninstall** —— stop the plugin and the home list returns to default; no leftover table migrations.
+  **卸载干净**——停用后首页回到默认列表，无任何残留。
 
-- **单段落约束**：说说只能包含一个段落，段落内仅允许行内文本样式（加粗、斜体、下划线、删除线、字号、文字颜色、背景色）。后端保存时强制执行白名单净化，块级标签与脚本一律剥离（防存储型 XSS）。
-- **兼容现有可视化编辑器**：存储格式与 modern-editor 的 block 结构一致（`[{ type: 'paragraph', contentHtml: '…' }]`），编辑器提供与 modern-editor 一致的浮动行内格式工具栏；该结构也可被 modern-editor 直接打开编辑。
-- **列表页直接展示全文**：覆盖 `web/index` 视图，说说以卡片形式完整展示在首页，不渲染「READ →」阅读链接。
-- **无标题、保留 slug**：`title` 为空，slug 固定为 `reserved_shuoshuo_<UUID>`；普通文章保存时若 slug 撞保留前缀会自动交给系统按标题重新生成。
-- **阅读页拦截**：注册全局中间件，任何 permalink 形态（`/posts/:slug`、`/posts/:id/:slug`、日期分段、`/post-xxx-page.html` 等）下强行访问说说的文章页面都会返回 404「文章不存在」。
-- **后台管理**：独立「说说」菜单与列表页，支持新建、编辑、删除、草稿/发布/归档。
+## Features / 功能
 
-## 安装
+- **Single paragraph constraint / 单段落约束**：inline styles only（bold/italic/underline/strikethrough/size/color/bg）；server whitelist sanitization blocks block-level tags & scripts（defense against stored XSS）.
+  只允许单段落与行内样式；后端白名单净化，防存储型 XSS。
+- **Visual editor compatible / 兼容可视化编辑器**：`[{ type: 'paragraph', contentHtml: '…' }]` blocks editable in modern-editor too.
+- **Full text on the list / 列表页直接展示全文**：overrides `web/index`, no「READ →」link.
+- **No title, reserved slug / 无标题、保留 slug**：`reserved_shuoshuo_<UUID>`；ordinary posts crossing the prefix get auto re-slugged.
+- **Reading page blocked / 阅读页拦截**：any permalink form returns 404 for shuoshuo posts.
+- **Admin management / 后台管理**：own menu & list page with new/edit/delete and draft/publish/archive status.
+
+## Install / 安装
 
 ```bash
-# 方式一：工作区同步（本仓库位于 LinearPress/Plugins 工作区时）
-cd base
-sh scripts/sync-plugins.sh shuoshuo
+# Option 1 — workspace sync（工作区同步）
+cd base && sh scripts/sync-plugins.sh shuoshuo
 
-# 方式二：克隆到运行目录（目录名必须等于插件 id）
-git clone <本仓库地址> src/plugins/shuoshuo
+# Option 2 — clone into runtime dir（目录名必须等于插件 id）
+git clone https://github.com/Averithen/linearpress-shuoshuo src/plugins/shuoshuo
 ```
 
-重启 LinearPress 自动发现并启用；也可打包 ZIP 用插件管理页安装。
+Restart LinearPress to discover and enable; or install via admin ZIP upload. / 重启自动发现启用；也可 ZIP 安装。
 
-## 本地开发：怎么拉 / 怎么改 / 怎么跑
+## Local Development / 本地开发：怎么拉 / 怎么改 / 怎么跑
 
 ```bash
-# 1. 拉
-git clone <本仓库地址> LinearPress/Plugins/shuoshuo
-
-# 2. 改：编辑 index.ts / src/ / views/ / public/
-
-# 3. 跑
+git clone https://github.com/Averithen/linearpress-shuoshuo LinearPress/Plugins/shuoshuo
 cd LinearPress/base
-npm install && npm run db:init          # 首次
+npm install && npm run db:init
 sh scripts/sync-plugins.sh shuoshuo
-npm run dev                             # http://localhost:3000
+npm run dev                             # → http://localhost:3000
 ```
 
-## 目录结构
+## Directory / 目录结构
 
 ```text
 shuoshuo/
-├── plugin.json              # Manifest
-├── index.ts                 # 入口：路由、拦截中间件、hooks、视图辅助
+├── plugin.json            # Manifest
+├── index.ts               # entry：routes, blocking middleware, hooks, view helpers
 ├── src/
-│   ├── render.ts            # 行内富文本白名单净化 + 说说渲染
-│   └── store.ts             # 说说数据访问层（复用 posts 表）
+│   ├── render.ts          # inline rich-text whitelist sanitizer + rendering
+│   └── store.ts           # data access（reuses posts table）
 ├── views/
-│   ├── web/index.ejs        # 覆盖首页列表：说说直接展示全文
-│   └── admin/               # 说说管理列表、单段落编辑器
+│   ├── web/index.ejs      # overrides home list：full text
+│   └── admin/             # manage list + single-paragraph editor
 └── public/
-    ├── shuoshuo.css         # 列表卡片 + 编辑器样式
-    └── shuoshuo-editor.js   # 单段落可视化编辑器
+    ├── shuoshuo.css
+    └── shuoshuo-editor.js
 ```
 
-## 贡献与发布
+## Contribute & Release / 贡献与发布
 
-- conventional commits；提交前 `cd base && npm run typecheck`
-- 版本：`git tag v1.0.0 && git push --tags`
-- License：MIT（见仓库 LICENSE）
+- conventional commits；`cd base && npm run typecheck` before commit
+- Version：`git tag v1.0.0 && git push --tags`
+- License：MIT（LICENSE）
