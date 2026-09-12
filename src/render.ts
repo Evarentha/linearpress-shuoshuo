@@ -1,21 +1,33 @@
 /*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
+ * Shuoshuo Inline HTML Sanitizer
+ *
+ * Normalizes, sanitizes, and renders shuoshuo single-paragraph content from
+ * modern-editor-compatible blocks.
+ *
+ * Authors:
+ * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ *
+ * Copyright (C) 2026 Evarentha
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 /**
- * 说说内容渲染与净化。
+ * Shuoshuo content rendering and sanitization.
  *
- * 说说只允许「一个段落 + 行内文本样式」，存储格式与 modern-editor 的 block
- * 结构兼容：content_json = [{ type: 'paragraph', contentHtml: '<b>…</b>' }]，
- * 也兼容 modern-editor 保存时包裹的 custom-html marker 块。
+ * <p>A shuoshuo allows only "one paragraph + inline text styles" and is
+ * stored in a block structure compatible with modern-editor: content_json
+ * = [{ type: 'paragraph', contentHtml: '<b>…</b>' }]; the custom-html
+ * marker block modern-editor wraps on save is also accepted.</p>
  *
- * 渲染前对行内 HTML 做白名单净化：
- *  - 允许的行内标签：strong/b/em/i/u/s/del/span/br/code/mark/font；
- *  - 允许的 CSS 属性：颜色、背景色、字号、下划线/删除线、字重、斜体；
- *  - 块级标签与脚本一律剥离，防止存储型 XSS。
+ * <p>Before rendering, inline HTML is sanitized against a whitelist:</p>
+ * <ul>
+ * <li>allowed inline tags: strong/b/em/i/u/s/del/span/br/code/mark/font;</li>
+ * <li>allowed CSS properties: color, background color, font size,
+ * underline/strikethrough, font weight, italic;</li>
+ * <li>block-level tags and scripts are always stripped, preventing stored
+ * XSS.</li>
+ * </ul>
+ * @since 1.0.0
  */
 
 /** modern-editor 保存时会把区块包裹成 custom-html marker。 */

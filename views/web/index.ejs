@@ -1,9 +1,20 @@
 <!--
-  Author: MoyuZJ
-  Team: LinearTeam
-  Contact: linearteam@foxmail.com
-  Made by MoyuZJ in China with ♥
-  覆盖核心 web/index：说说文章直接展示全文，不提供阅读链接。
+  Home Page List Override
+
+  Overrides the core web/index view so shuoshuo posts render in full
+  directly in the home list.
+
+  Authors:
+  MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
+<!--
+  Shuoshuo posts show their complete text with a badge and no reading
+  link, while normal posts keep their title row and READ arrow.
+  @since 1.0.0
 -->
 
 <section class="intro"><p class="eyebrow"><%= siteConfig.siteName || 'INDEPENDENT PUBLISHING SYSTEM' %></p><h1><%= siteConfig.siteTitle || '写下值得留下的内容。' %></h1><p class="lede"><%= siteConfig.siteSubtitle || 'LinearPress 是一个极简、可扩展、服务端渲染的写作空间。' %></p></section><section class="post-list"><% posts.forEach(post => { if (isShuoShuo(post.slug)) { %><article class="post-row shuoshuo-row"><div class="shuoshuo-main"><p class="meta"><span class="shuoshuo-badge">说说</span> <%= formatDate(post.created_at) %> / <%= post.views %> VIEWS</p><%- shuoshuoHtml(post) %></div></article><% } else { %><article class="post-row"><div><p class="meta"><%= formatDate(post.created_at) %> / <%= post.views %> VIEWS</p><h2><a href="<%= postUrl(post) %>"><%= post.title %></a></h2></div><a class="arrow" href="<%= postUrl(post) %>">READ →</a></article><% } }) %></section>

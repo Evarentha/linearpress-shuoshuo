@@ -1,11 +1,23 @@
-<%
-/*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
- */
-%>
+<!--
+  Shuoshuo Single-Paragraph Editor View
+
+  Admin view for composing or editing one shuoshuo in a single-paragraph
+  visual editor.
+
+  Authors:
+  MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
+<!--
+  Renders the editor shell consumed by shuoshuo-editor.js: sticky top bar
+  with draft/publish actions, the contenteditable compose area, hidden
+  id/slug/content_json/status fields, and the window.SHUOSHUO_INITIAL
+  bootstrap. The form posts to /admin/shuoshuo/save.
+  @since 1.0.0
+-->
 
 <div class="shuoshuo-editor-page" data-shuoshuo-editor data-cloud-saved-at="<%= Number(cloudSavedAt) || 0 %>">
   <form id="shuoshuo-form" method="post" action="/admin/shuoshuo/save">

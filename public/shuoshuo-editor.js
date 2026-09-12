@@ -1,11 +1,21 @@
 /*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
+ * Shuoshuo Editor Frontend Runtime
  *
- * 说说编辑器：单段落富文本（contenteditable），行内格式工具栏与
- * modern-editor 交互一致。仅在存在 [data-shuoshuo-editor] 的页面激活。
+ * Browser runtime for the single-paragraph shuoshuo editor, with an inline
+ * format toolbar consistent with modern-editor.
+ *
+ * Authors:
+ * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ *
+ * Copyright (C) 2026 Evarentha
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/**
+ * Shuoshuo editor: single-paragraph rich text (contenteditable) with an
+ * inline format toolbar whose interactions match modern-editor. Activates
+ * only on pages where [data-shuoshuo-editor] is present.
+ * @since 1.0.0
  */
 
 (() => {

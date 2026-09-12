@@ -1,16 +1,25 @@
 /*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
+ * Shuoshuo Data Access Layer
+ *
+ * Queries and persistence for shuoshuo posts on top of the shared posts
+ * table.
+ *
+ * Authors:
+ * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ *
+ * Copyright (C) 2026 Evarentha
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 /**
- * 说说数据访问层。
+ * Shuoshuo data access layer.
  *
- * 说说复用 posts 表：title 为空字符串、slug 使用保留前缀 reserved_shuoshuo_<UUID>、
- * content_json 为单段落块（内容存净化后的行内 HTML）。
- * 本模块只依赖最小 DatabaseService 接口，不依赖 Base 内部实现。
+ * <p>Shuoshuo reuses the posts table: the title is an empty string, the
+ * slug uses the reserved reserved_shuoshuo_ prefix plus a UUID, and
+ * content_json holds a single paragraph block (with sanitized inline
+ * HTML). This module depends only on a minimal DatabaseService interface,
+ * not on Base internals.</p>
+ * @since 1.0.0
  */
 
 import crypto from 'node:crypto';

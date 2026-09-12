@@ -1,9 +1,20 @@
 <!--
-  Author: MoyuZJ
-  Team: LinearTeam
-  Contact: linearteam@foxmail.com
-  Made by MoyuZJ in China with ♥
-  覆盖核心 admin/posts：说说没有标题，列表显示「说说」标签并跳转说说编辑器。
+  Admin Posts List Override
+
+  Overrides the core admin posts list so shuoshuo entries stand out and
+  open in the shuoshuo editor.
+
+  Authors:
+  MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
+<!--
+  Shuoshuo posts have no title: the list shows a "shuoshuo" tag for them
+  and links them to the shuoshuo editor instead of the post editor.
+  @since 1.0.0
 -->
 
 <div class="page-head"><h1>文章</h1><a class="button" href="/admin/posts/new">+ 新建</a></div><table><thead><tr><th>标题</th><th>状态</th><th>作者</th><th>操作</th></tr></thead><tbody><% posts.forEach(post => { %><tr><td><% if (isShuoShuo(post.slug)) { %><span class="shuoshuo-tag">说说</span><% } else { %><%= post.title %><% } %></td><td><%= post.status %></td><td><%= post.author_name %></td><td><a href="<%= isShuoShuo(post.slug) ? '/admin/shuoshuo/' + post.id + '/edit' : '/admin/posts/' + post.id + '/edit' %>">编辑</a> <form class="inline" method="post" action="/admin/posts/<%= post.id %>/delete"><button>删除</button></form></td></tr><% }) %></tbody></table>

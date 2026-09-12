@@ -1,8 +1,22 @@
 /*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
+ * Shuoshuo Styles
+ *
+ * Styles for shuoshuo rows on the home list, the admin table, and the
+ * single-paragraph editor page.
+ *
+ * Authors:
+ * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ *
+ * Copyright (C) 2026 Evarentha
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/*
+ * Covers the full-text shuoshuo rows on the home list, the shuoshuo cells
+ * and tags in the admin tables, and the editor page: sticky top bar,
+ * compose card, meta row, and the floating format toolbar that appears on
+ * text selection.
+ * @since 1.0.0
  */
 
 /* ----------------------------------------------------------- 前台列表 */

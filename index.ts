@@ -1,22 +1,35 @@
 /*
- * Author: MoyuZJ
- * Team: LinearTeam
- * Contact: linearteam@foxmail.com
- * Made by MoyuZJ in China with ♥
+ * Shuoshuo Micro-Post Plugin
+ *
+ * Adds the shuoshuo post type: single-paragraph, inline-styled micro-posts
+ * shown in full on the home list.
+ *
+ * Authors:
+ * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ *
+ * Copyright (C) 2026 Evarentha
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 /**
- * 说说插件（Cordis 原生插件）。
+ * Shuoshuo micro-post plugin (native Cordis plugin).
  *
- * 功能：
- *  1. 新增一种文章类型「说说」：复用 posts 表，title 为空，slug 使用保留前缀
- *     reserved_shuoshuo_<UUID>，内容为单段落（仅允许行内文本样式：加粗/颜色等），
- *     存储格式与 modern-editor 的 block 结构兼容。
- *  2. 首页列表直接完整展示说说正文（覆盖 web/index 视图），不可进入阅读页；
- *     通过任何 permalink 形态强行访问说说的文章页面都会返回 404。
- *  3. 后台提供独立的说说管理页与单段落可视化编辑器（行内格式工具栏，
- *     与 modern-editor 交互一致）。
- *  4. 保护保留前缀：普通文章保存时若 slug 撞前缀则自动重新生成。
+ * <p>Features:</p>
+ * <ul>
+ * <li>Adds a "shuoshuo" post type: it reuses the posts table with an empty
+ * title, a slug under the reserved reserved_shuoshuo_ prefix plus a UUID,
+ * and a single-paragraph body (inline text styles only: bold, color, etc.)
+ * stored in a block format compatible with modern-editor.</li>
+ * <li>The home list shows shuoshuo posts in full (overrides the web/index
+ * view) with no reading page; any permalink form that forcibly opens a
+ * shuoshuo post returns 404.</li>
+ * <li>Provides a dedicated admin management page and a single-paragraph
+ * visual editor (inline format toolbar, interactions consistent with
+ * modern-editor).</li>
+ * <li>Protects the reserved prefix: saving a normal post whose slug
+ * collides with the prefix regenerates the slug automatically.</li>
+ * </ul>
+ * @since 1.0.0
  */
 
 import type { Context } from 'cordis';
