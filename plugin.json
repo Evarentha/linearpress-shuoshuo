@@ -1,7 +1,7 @@
 {
   "id": "shuoshuo",
   "name": "说说",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "description": "一种只有一段话的文章类型：只允许单个段落与行内文本样式（加粗、颜色等），列表页直接展示全文，不可进入阅读页，固定链接使用保留前缀 reserved_shuoshuo_。",
   "author": "LinearPress",
   "type": "both",
@@ -9,6 +9,10 @@
   "runtime": "cordis",
   "views": "views",
   "public": "public",
-  "styles": ["shuoshuo.css"],
-  "scripts": ["shuoshuo-editor.js"]
+  "styles": [
+    "shuoshuo.css"
+  ],
+  "scripts": [
+    "shuoshuo-editor.js"
+  ]
 }
