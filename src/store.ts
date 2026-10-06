@@ -1,11 +1,11 @@
 /*
  * Shuoshuo Data Access Layer
  *
- * Queries and persistence for shuoshuo posts on top of the shared posts
- * table.
+ * Queries and persistence for shuoshuo posts on top of the shared posts table.
  *
  * Authors:
  * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@gmail.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -23,7 +23,8 @@
  */
 
 import crypto from 'node:crypto';
-import type { PostStatus } from '../../../types/index.js';
+import type { Block, PostStatus } from '../../../types/index.js';
+import type { PostService } from '../../../types/services.js';
 
 /** 说说 slug 保留前缀（普通文章不允许使用）。 */
 export const SHUOSHUO_SLUG_PREFIX = 'reserved_shuoshuo_';
@@ -62,7 +63,7 @@ export async function nextShuoShuoSlug(db: ShuoShuoDatabase): Promise<string> {
 }
 
 /** 精确匹配说说前缀的 SQL 片段（LIKE 的 _ 是通配符，需转义）。 */
-const SHUOSHUO_LIKE = 'reserved\\_shuoshuo\\_%';
+const SHUOSHUO_MATCH = `SUBSTR(slug, 1, ${SHUOSHUO_SLUG_PREFIX.length})=?`;
 
 function hydrate(row: ShuoShuoRow & { content_json: string } | undefined): ShuoShuoRow | undefined {
   if (!row) return undefined;
@@ -75,38 +76,31 @@ function hydrate(row: ShuoShuoRow & { content_json: string } | undefined): ShuoS
 export async function listShuoShuo(db: ShuoShuoDatabase): Promise<Array<ShuoShuoRow & { author_name: string }>> {
   const rows = await db.all<ShuoShuoRow & { author_name: string; content_json: string }>(
     `SELECT posts.*, users.username AS author_name FROM posts JOIN users ON users.id = posts.author_id
-     WHERE posts.slug LIKE ? ESCAPE '\\' ORDER BY posts.created_at DESC, posts.id DESC`,
-    SHUOSHUO_LIKE
+     WHERE SUBSTR(posts.slug, 1, ${SHUOSHUO_SLUG_PREFIX.length})=? ORDER BY posts.created_at DESC, posts.id DESC`,
+    SHUOSHUO_SLUG_PREFIX
   );
   return rows.map((row) => ({ ...hydrate(row)!, author_name: row.author_name })).filter(Boolean);
 }
 
 /** 查找单条说说；非说说文章返回 undefined。 */
 export async function findShuoShuo(db: ShuoShuoDatabase, id: number): Promise<ShuoShuoRow | undefined> {
-  const row = await db.get<ShuoShuoRow & { content_json: string }>('SELECT * FROM posts WHERE id=? AND slug LIKE ? ESCAPE \'\\\'', id, SHUOSHUO_LIKE);
+  const row = await db.get<ShuoShuoRow & { content_json: string }>(`SELECT * FROM posts WHERE id=? AND ${SHUOSHUO_MATCH}`, id, SHUOSHUO_SLUG_PREFIX);
   return hydrate(row);
 }
 
 /** 新建或更新说说。html 为净化后的行内 HTML；content_json 存单段落块。 */
-export async function saveShuoShuo(db: ShuoShuoDatabase, input: { id?: number; slug: string; html: string; status: PostStatus; authorId: number }): Promise<ShuoShuoRow> {
-  const contentJson = JSON.stringify([{ type: 'paragraph', contentHtml: input.html }]);
-  if (input.id) {
-    const existing = await findShuoShuo(db, input.id);
-    if (!existing) throw new Error('说说不存在。');
-    const affected = await db.run('UPDATE posts SET slug=?, content_json=?, html_cache=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', input.slug, contentJson, `<p>${input.html}</p>`, input.status, input.id);
-    void affected;
-  } else {
-    const result = await db.run('INSERT INTO posts(title,slug,content_json,html_cache,status,author_id) VALUES(?,?,?,?,?,?)', '', input.slug, contentJson, `<p>${input.html}</p>`, input.status, input.authorId) as { lastInsertRowid?: number | bigint };
-    input.id = Number(result.lastInsertRowid);
-  }
-  const saved = await findShuoShuo(db, input.id);
+export async function saveShuoShuo(db: ShuoShuoDatabase, posts: PostService, input: { id?: number; slug: string; html: string; status: PostStatus; authorId: number }): Promise<ShuoShuoRow> {
+  const existing = input.id ? await findShuoShuo(db, input.id) : undefined;
+  if (input.id && !existing) throw new Error('说说不存在。');
+  const savedPost = await posts.save({ id: input.id, title: '', slug: existing?.slug ?? input.slug, blocks: [{ type: 'custom-html', content: `<p>${input.html}</p>`, modernBlock: { type: 'paragraph', contentHtml: input.html } }] as unknown as Block[], status: input.status, authorId: existing?.author_id ?? input.authorId, postType: 'shuoshuo' });
+  const saved = await findShuoShuo(db, savedPost.id);
   if (!saved) throw new Error('说说保存失败。');
   return saved;
 }
 
 /** 删除说说。 */
-export async function removeShuoShuo(db: ShuoShuoDatabase, id: number): Promise<void> {
+export async function removeShuoShuo(db: ShuoShuoDatabase, posts: PostService, id: number): Promise<void> {
   const existing = await findShuoShuo(db, id);
   if (!existing) throw new Error('说说不存在。');
-  await db.run('DELETE FROM posts WHERE id=?', id);
+  await posts.remove(id);
 }

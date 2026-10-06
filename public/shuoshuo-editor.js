@@ -1,11 +1,11 @@
 /*
  * Shuoshuo Editor Frontend Runtime
  *
- * Browser runtime for the single-paragraph shuoshuo editor, with an inline
- * format toolbar consistent with modern-editor.
+ * Browser runtime for the single-paragraph shuoshuo editor, with an inline format toolbar consistent with modern-editor.
  *
  * Authors:
  * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@gmail.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later

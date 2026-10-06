@@ -1,11 +1,11 @@
 /*
  * Shuoshuo Inline HTML Sanitizer
  *
- * Normalizes, sanitizes, and renders shuoshuo single-paragraph content from
- * modern-editor-compatible blocks.
+ * Normalizes, sanitizes, and renders shuoshuo single-paragraph content from modern-editor-compatible blocks.
  *
  * Authors:
  * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@gmail.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -92,6 +92,7 @@ export function sanitizeInlineHtml(value: unknown): string {
 /** 解码 modern-editor 的 custom-html marker 块；非 marker 返回原对象。 */
 export function decodeMarker(block: ShuoShuoBlock): ShuoShuoBlock {
   if (String(block.type ?? '') !== 'custom-html') return block;
+  if (block.modernBlock && typeof block.modernBlock === 'object' && !Array.isArray(block.modernBlock)) return block.modernBlock as ShuoShuoBlock;
   const raw = String(block.content ?? '');
   if (!raw.startsWith(MODERN_MARKER)) return block;
   try {

@@ -1,11 +1,11 @@
 /*
  * Shuoshuo Micro-Post Plugin
  *
- * Adds the shuoshuo post type: single-paragraph, inline-styled micro-posts
- * shown in full on the home list.
+ * Adds the shuoshuo post type: single-paragraph, inline-styled micro-posts shown in full on the home list.
  *
  * Authors:
  * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@gmail.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -36,7 +36,7 @@ import type { Context } from 'cordis';
 import type { Request, RequestHandler, Response } from 'express';
 import { checkPermission, requireAuth } from '../../services/permission.service.js';
 import type { Post, PostStatus } from '../../types/index.js';
-import type { DatabaseService } from '../../types/services.js';
+import { resolvePostParams } from '../../core/permalinks.js';
 import { normalizeShuoShuoBlocks, renderShuoShuoHtml } from './src/render.js';
 import { findShuoShuo, isShuoShuoSlug, listShuoShuo, nextShuoShuoSlug, removeShuoShuo, saveShuoShuo, type ShuoShuoDatabase } from './src/store.js';
 
@@ -63,18 +63,18 @@ export default function shuoShuo(context: Context): void {
   const { web, hooks } = context.linearpress;
   const db = dbOf(context);
 
-  // ------------------------------------------------------------ 阅读页拦截
-  // 说说的 slug 为保留前缀，任何 permalink 形态（/posts/:slug、/posts/:id/:slug、
-  // 日期分段、/post-xxx-page.html 等）都包含该前缀；后台与资源路径除外。
-  // 中间件在核心路由之前执行（app.ts：middlewares 先于 router.applyToApp）。
-  web.middleware((req, res, next) => {
-    const path = req.path;
-    if (path === '/' || path.startsWith('/admin') || path.startsWith('/api') || path.startsWith('/plugins') || path.startsWith('/css/') || path.startsWith('/js/') || path === '/favicon.ico') return next();
-    if (path.includes('reserved_shuoshuo_')) {
-      return void res.status(404).render('error', { title: '未找到', message: '文章不存在或尚未发布。' });
-    }
-    next();
-  });
+  // Resolve the actual Post before enforcing type; ID and legacy permalinks
+  // must have the same semantics as slug URLs. next() preserves core rendering.
+  const readingGuard: RequestHandler = (req, res, next) => {
+    void (async () => {
+      const site = await context.config.get();
+      const target = resolvePostParams(req.params as Record<string, string | undefined>, site.permalink);
+      const post = target.id ? await context.posts.findById(target.id) : await context.posts.findBySlug(target.slug ?? '');
+      if (post && isShuoShuoSlug(post.slug)) return void res.status(404).render('error', { title: '未找到', message: '文章不存在或尚未发布。' });
+      next();
+    })().catch(next);
+  };
+  for (const path of ['/posts/:slug', '/posts/:first/:slug', '/posts/:MM/:dd/:slug', '/posts/:yyyy/:MM/:dd/:slug', '/post-:slug-page.html', '/post/:slug']) web.register('get', path, readingGuard);
 
   // ------------------------------------------------------------ 说说管理列表
   web.register('get', MANAGE_PAGE, requireAuth, checkPermission('post:edit'), wrap(async (_req, res) => {
@@ -117,13 +117,13 @@ export default function shuoShuo(context: Context): void {
     let slug = String(req.body.slug ?? '');
     // 编辑器会附带隐藏 slug；缺失或非法时（如直接 API 调用）自动生成保留前缀 slug。
     if (!isShuoShuoSlug(slug)) slug = await nextShuoShuoSlug(db);
-    await saveShuoShuo(db, { id, slug, html, status: statusOf(req.body.status), authorId: req.session.userId! });
+    await saveShuoShuo(db, context.posts, { id, slug, html, status: statusOf(req.body.status), authorId: req.session.userId! });
     res.redirect(`${MANAGE_PAGE}?notice=saved`);
   }));
 
   // ------------------------------------------------------------ 删除
   web.register('post', DELETE_URL, requireAuth, checkPermission('post:delete'), wrap(async (req, res) => {
-    await removeShuoShuo(db, Number(param(req.params.id)));
+    await removeShuoShuo(db, context.posts, Number(param(req.params.id)));
     res.redirect(`${MANAGE_PAGE}?notice=deleted`);
   }));
 
@@ -138,7 +138,13 @@ export default function shuoShuo(context: Context): void {
   }));
 
   // 保留前缀保护：普通文章保存时若 slug 撞保留前缀，交给系统按标题重新生成。
-  hooks.on('post:beforeSave', (draft) => (isShuoShuoSlug(String(draft.slug ?? '')) ? { ...draft, slug: '' } : draft));
+  hooks.on('post:beforeSave', async (draft) => {
+    const existing = draft.id ? await context.posts.findById(draft.id) : undefined;
+    // Type changes are never an accidental side effect of quick editing.
+    if (existing && isShuoShuoSlug(existing.slug)) return { ...draft, title: existing.title, slug: existing.slug };
+    if ((draft as Post & { postType?: string }).postType === 'shuoshuo') return draft;
+    return isShuoShuoSlug(String(draft.slug ?? '')) ? { ...draft, slug: '' } : draft;
+  });
 
   context.logger.info('activated');
 }
