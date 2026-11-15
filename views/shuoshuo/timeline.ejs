@@ -1,0 +1,28 @@
+<%#
+  Shuoshuo · public timeline (/shuoshuo).
+
+  Authors:
+  MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+  worryzu <worryzu@evarentha.com> @LinearTeam
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+%><div class="wrap wrap-read" data-lp-plugin="shuoshuo">
+  <header class="list-head"><div><h1>说说</h1><p><%= total ? `共 ${total} 条，最新的在最前面` : '随手记下的片段' %></p></div></header>
+  <% if (items.length) { %>
+  <ol class="ss-timeline">
+    <% for (const item of items) { %>
+    <li id="s-<%= item.id %>">
+      <div class="ss-meta">
+        <span class="ss-author"><%= displayName({ id: item.author_id, username: item.author_name }) %></span>
+        <a class="dot" href="#s-<%= item.id %>"><time datetime="<%= isoTime(item.created_at) %>" title="<%= formatDate(item.created_at) %>"><%= formatRelative(item.created_at) %></time></a>
+      </div>
+      <div class="ss-body"><%- item.html %></div>
+    </li>
+    <% } %>
+  </ol>
+  <div class="list-foot"><%- include('partials/pagination', { pager }) %></div>
+  <% } else { %>
+  <%- include('partials/empty', { title: '还没有说说', text: '作者还没有发过说说。', icon: 'doc', action: { href: '/posts', label: '看看文章' } }) %>
+  <% } %>
+</div>

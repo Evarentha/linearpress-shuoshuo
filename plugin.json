@@ -1,18 +1,18 @@
 {
   "id": "shuoshuo",
   "name": "说说",
-  "version": "3.0.0",
-  "description": "一种只有一段话的文章类型：只允许单个段落与行内文本样式（加粗、颜色等），列表页直接展示全文，不可进入阅读页，固定链接使用保留前缀 reserved_shuoshuo_。",
+  "version": "4.0.0",
+  "description": "随手发一段话：没有标题、只有一个段落，支持加粗、高亮和链接；在“说说”页面以时间线展示，首页显示最近几条。",
   "author": "LinearPress",
+  "icon": "说说",
   "type": "both",
   "main": "index.ts",
-  "runtime": "cordis",
   "views": "views",
   "public": "public",
   "styles": [
-    "shuoshuo.css"
+    { "file": "shuoshuo.css", "scope": "all" }
   ],
   "scripts": [
-    "shuoshuo-editor.js"
+    { "file": "shuoshuo.js", "scope": "admin", "paths": ["/admin/shuoshuo"] }
   ]
 }

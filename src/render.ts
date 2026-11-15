@@ -1,142 +1,108 @@
 /*
- * Shuoshuo Inline HTML Sanitizer
+ * Shuoshuo Rendering
  *
- * Normalizes, sanitizes, and renders shuoshuo single-paragraph content from modern-editor-compatible blocks.
+ * Sanitizes and renders the single paragraph of inline rich text a shuoshuo consists of.
  *
  * Authors:
- * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
- * worryzu <worryzu@gmail.com> @LinearTeam
+ * MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@evarentha.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 /**
- * Shuoshuo content rendering and sanitization.
+ * <p>A shuoshuo is stored as one block: <code>{ type: 'shuoshuo', html }</code>.
+ * The HTML is sanitized on save and again on render (whitelist of inline tags,
+ * a few colour/weight styles, http(s)/mailto links). Older records written by
+ * 3.x (custom-html marker or paragraph blocks) are read through
+ * {@link legacyHtml} and converted once.</p>
  *
- * <p>A shuoshuo allows only "one paragraph + inline text styles" and is
- * stored in a block structure compatible with modern-editor: content_json
- * = [{ type: 'paragraph', contentHtml: '<b>…</b>' }]; the custom-html
- * marker block modern-editor wraps on save is also accepted.</p>
- *
- * <p>Before rendering, inline HTML is sanitized against a whitelist:</p>
- * <ul>
- * <li>allowed inline tags: strong/b/em/i/u/s/del/span/br/code/mark/font;</li>
- * <li>allowed CSS properties: color, background color, font size,
- * underline/strikethrough, font weight, italic;</li>
- * <li>block-level tags and scripts are always stripped, preventing stored
- * XSS.</li>
- * </ul>
  * @since 1.0.0
  */
 
-/** modern-editor 保存时会把区块包裹成 custom-html marker。 */
-export const MODERN_MARKER = 'LP-MODERN-BLOCK::';
+export const MAX_TEXT = 2000;
+const INLINE = new Set(['strong', 'b', 'em', 'i', 'u', 's', 'del', 'span', 'br', 'code', 'mark', 'font', 'a']);
+const STYLES = new Set(['color', 'background-color', 'font-weight', 'font-style', 'text-decoration-line']);
+const STYLE_VALUE = /^[#\w (),.%+-]{1,40}$/;
 
-/** 允许的行内标签（除 br 外均以成对标签处理，font 归一化为 span）。 */
-const ALLOWED_TAGS = new Set(['STRONG', 'B', 'EM', 'I', 'U', 'S', 'DEL', 'SPAN', 'BR', 'CODE', 'MARK', 'FONT']);
-/** 允许的 CSS 属性（仅保留纯色/简单数值，杜绝表达式与 url() 注入）。 */
-const ALLOWED_STYLES = new Set(['color', 'background-color', 'font-size', 'text-decoration-line', 'text-decoration-style', 'font-weight', 'font-style']);
-const STYLE_VALUE_PATTERN = /^[#\w (),.%+-]+$/;
-
-export interface ShuoShuoBlock { type?: string; content?: unknown; contentHtml?: unknown; [key: string]: unknown; }
-
-/** HTML 转义。 */
-export function escapeHtml(value: unknown): string {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]!));
+export const escapeHtml = (value: unknown): string => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]!));
+const attr = (attrs: string, name: string) => new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(attrs)?.slice(1).find((value) => value !== undefined);
+const decodeEntities = (value: string) => value.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+function safeHref(value: string | undefined): string | undefined {
+  const href = decodeEntities(String(value ?? '')).trim();
+  return /^(https?:\/\/|mailto:)[^\s"'<>]+$/i.test(href) ? href : undefined;
 }
 
-/** 纯文本安全化：转义 + 换行转 <br>（保留段内换行）。 */
-function safeText(value: unknown): string {
-  return escapeHtml(value).replace(/\r?\n/g, '<br>');
-}
-
-/**
- * 行内富文本净化。
- * - 无任何标签 → 按纯文本处理（转义 + 换行）；
- * - 含标签 → 标签白名单过滤，style 白名单过滤，其余内容原样保留。
- */
-export function sanitizeInlineHtml(value: unknown): string {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  if (!/<[a-z][^>]*>/i.test(raw)) return safeText(raw.replace(/\s+/g, ' '));
-  return raw
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-    .replace(/<\/?([a-z][\w-]*)([^>]*)>/gi, (full, tagName: string, attrs: string) => {
-      const tag = tagName.toLowerCase();
-      if (tag === 'br') return '<br>';
-      if (!ALLOWED_TAGS.has(tag.toUpperCase())) return ''; // 剥离块级/未知标签，保留文本内容
-      if (full.startsWith('</')) return `</${tag === 'font' ? 'span' : tag}>`;
-      const rules: string[] = [];
-      const styleMatch = attrs.match(/\sstyle\s*=\s*["']([^"']*)["']/i);
-      if (styleMatch) rules.push(...styleMatch[1].split(';'));
-      if (tag === 'font') {
-        const color = attrs.match(/\scolor\s*=\s*["']?([#\w(),.%+-]+)["']?/i)?.[1];
-        if (color && /^[#\w(),.%+-]+$/.test(color)) rules.push(`color:${color}`);
-        const size = attrs.match(/\ssize\s*=\s*["']?(\d+)["']?/i)?.[1];
-        if (size) rules.push(`font-size:${Math.min(7, Math.max(1, Number(size))) * 4 + 8}px`);
-      }
-      const style = rules
-        .map((rule) => rule.trim())
-        .filter((rule) => {
-          const [property, ...parts] = rule.split(':');
-          const value = parts.join(':').trim();
-          return ALLOWED_STYLES.has(property.trim().toLowerCase()) && STYLE_VALUE_PATTERN.test(value);
-        })
-        .join(';');
-      return style ? `<${tag === 'font' ? 'span' : tag} style="${escapeHtml(style)}">` : `<${tag === 'font' ? 'span' : tag}>`;
+/** Keep only inline formatting; everything else is reduced to its text. Tags are re-balanced. */
+export function sanitizeInline(value: unknown): string {
+  const raw = String(value ?? '').replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style|template|iframe|object)\b[\s\S]*?<\/\1\s*>/gi, '');
+  const open: string[] = [];
+  // Stray angle brackets are escaped, so fragments like <scr<b>ipt> can never reassemble into a tag.
+  let html = raw.replace(/<\/?([a-z][\w-]*)([^<>]*)>|[<>]/gi, (full, name: string | undefined, attrs: string) => {
+    if (!name) return full === '<' ? '&lt;' : '&gt;';
+    let tag = name.toLowerCase();
+    if (!INLINE.has(tag)) return /^(p|div|li|h[1-6]|blockquote|tr)$/.test(tag) && full.startsWith('</') ? '<br>' : '';
+    if (tag === 'br') return '<br>';
+    if (tag === 'font') tag = 'span';
+    if (tag === 'b') tag = 'strong';
+    if (tag === 'i') tag = 'em';
+    if (full.startsWith('</')) {
+      const at = open.lastIndexOf(tag);
+      if (at < 0) return '';
+      const closing = open.splice(at).reverse().map((t) => `</${t}>`).join('');
+      return closing;
+    }
+    if (tag === 'a') {
+      const href = safeHref(attr(attrs, 'href'));
+      if (!href) return '';
+      open.push('a');
+      return `<a href="${escapeHtml(href)}" rel="nofollow noopener noreferrer" target="_blank">`;
+    }
+    const rules = String(attr(attrs, 'style') ?? '').split(';').map((rule) => rule.trim()).filter((rule) => {
+      const [property, ...rest] = rule.split(':');
+      return STYLES.has(property.trim().toLowerCase()) && STYLE_VALUE.test(rest.join(':').trim());
     });
+    const color = name.toLowerCase() === 'font' ? attr(attrs, 'color') : undefined;
+    if (color && /^#?\w{3,20}$/.test(color)) rules.push(`color:${color}`);
+    if (tag === 'span' && !rules.length) return '';
+    open.push(tag);
+    return rules.length ? `<${tag} style="${escapeHtml(rules.join(';'))}">` : `<${tag}>`;
+  });
+  html += open.reverse().map((tag) => `</${tag}>`).join('');
+  // collapse runs of breaks and trim leading/trailing ones
+  return html.replace(/(<br>\s*){3,}/g, '<br><br>').replace(/^(\s|<br>)+|(\s|<br>)+$/g, '').replace(/&nbsp;/g, ' ');
 }
 
-/** 解码 modern-editor 的 custom-html marker 块；非 marker 返回原对象。 */
-export function decodeMarker(block: ShuoShuoBlock): ShuoShuoBlock {
-  if (String(block.type ?? '') !== 'custom-html') return block;
-  if (block.modernBlock && typeof block.modernBlock === 'object' && !Array.isArray(block.modernBlock)) return block.modernBlock as ShuoShuoBlock;
-  const raw = String(block.content ?? '');
-  if (!raw.startsWith(MODERN_MARKER)) return block;
-  try {
-    const decoded = Buffer.from(raw.slice(MODERN_MARKER.length), 'base64').toString('utf8');
-    const value = JSON.parse(decoded) as unknown;
-    if (value && typeof value === 'object' && !Array.isArray(value)) return value as ShuoShuoBlock;
-  } catch { /* 解码失败按原块处理 */ }
-  return block;
+export const textOf = (html: string): string => decodeEntities(html.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')).trim();
+
+/** Validate and normalise editor input into the stored HTML. */
+export function normalize(html: unknown): string {
+  const clean = sanitizeInline(html);
+  const text = textOf(clean);
+  if (!text) throw Object.assign(new Error('写点什么再发布吧'), { field: 'html' });
+  if ([...text].length > MAX_TEXT) throw Object.assign(new Error(`说说最多 ${MAX_TEXT} 字，现在有 ${[...text].length} 字`), { field: 'html' });
+  return clean;
 }
 
-/** 提取说说正文 HTML（净化后，不含外层 <p>）。 */
-export function extractShuoShuoHtml(blocks: unknown): string {
-  const list = Array.isArray(blocks) ? blocks : [];
-  for (const item of list) {
+export const renderHtml = (html: unknown): string => `<p class="shuoshuo-text">${sanitizeInline(html)}</p>`;
+
+/** Inner HTML from a 3.x record (custom-html marker wrapping a paragraph, or a paragraph block). */
+export function legacyHtml(blocks: unknown): string {
+  for (const item of Array.isArray(blocks) ? blocks : []) {
     if (!item || typeof item !== 'object') continue;
-    const block = decodeMarker(item as ShuoShuoBlock);
-    if (String(block.type ?? '') !== 'paragraph') continue;
-    const content = String(block.contentHtml ?? block.content ?? '');
-    const html = sanitizeInlineHtml(content);
-    if (!html) continue;
-    return String(html).trim().replace(/^<p[^>]*>|<\/p>$/gi, '');
+    let block = item as Record<string, unknown>;
+    if (block.type === 'shuoshuo') return String(block.html ?? '');
+    if (block.type === 'custom-html') {
+      if (block.modernBlock && typeof block.modernBlock === 'object') block = block.modernBlock as Record<string, unknown>;
+      else {
+        const content = String(block.content ?? '');
+        if (content.startsWith('LP-MODERN-BLOCK::')) {
+          try { block = JSON.parse(Buffer.from(content.slice(17), 'base64').toString('utf8')); } catch { block = { type: 'paragraph', contentHtml: '' }; }
+        } else block = { type: 'paragraph', contentHtml: content };
+      }
+    }
+    if (block.type === 'paragraph') return sanitizeInline(block.contentHtml ?? escapeHtml(block.content ?? ''));
   }
   return '';
-}
-
-/** 渲染说说为完整 HTML 片段（单段落）。 */
-export function renderShuoShuoHtml(blocks: unknown): string {
-  const html = extractShuoShuoHtml(blocks);
-  if (!html) return '';
-  return `<div class="shuoshuo-body"><p class="shuoshuo-paragraph">${html}</p></div>`;
-}
-
-/** 从净化后的行内 HTML 中提取纯文本（用于空内容校验）。 */
-export function textOfHtml(html: string): string {
-  return html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
-}
-
-/** 保存时校验并标准化说说正文：必须以单段落块存储。 */
-export function normalizeShuoShuoBlocks(blocks: unknown): string {
-  const list = Array.isArray(blocks) ? blocks : [];
-  if (list.length !== 1) throw new Error('说说只能包含一个段落。');
-  const block = decodeMarker(list[0] as ShuoShuoBlock);
-  if (String(block.type ?? '') !== 'paragraph') throw new Error('说说正文只能使用普通段落样式。');
-  const html = sanitizeInlineHtml(String(block.contentHtml ?? block.content ?? '').trim().replace(/^<p[^>]*>|<\/p>$/gi, ''));
-  if (!textOfHtml(html)) throw new Error('说说内容不能为空。');
-  return String(html).trim();
 }

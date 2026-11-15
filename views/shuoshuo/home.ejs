@@ -1,0 +1,20 @@
+<%#
+  Shuoshuo · home section (slot home.before-latest).
+
+  Authors:
+  MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+  worryzu <worryzu@evarentha.com> @LinearTeam
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+%><% if (data && data.items.length) { %><section class="home-section ss-home" data-lp-plugin="shuoshuo" aria-labelledby="ss-home-title">
+  <div class="section-head"><h2 id="ss-home-title">最近说说</h2><a href="/shuoshuo">全部 <span class="num"><%= data.total %></span> 条 →</a></div>
+  <ol class="ss-timeline ss-compact">
+    <% for (const item of data.items) { %>
+    <li>
+      <div class="ss-body"><%- item.html %></div>
+      <div class="ss-meta"><a href="/shuoshuo#s-<%= item.id %>"><time datetime="<%= isoTime(item.created_at) %>" title="<%= formatDate(item.created_at) %>"><%= formatRelative(item.created_at) %></time></a></div>
+    </li>
+    <% } %>
+  </ol>
+</section><% } %>

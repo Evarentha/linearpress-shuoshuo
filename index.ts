@@ -1,162 +1,139 @@
 /*
- * Shuoshuo Micro-Post Plugin
+ * Shuoshuo Plugin Entry Point
  *
- * Adds the shuoshuo post type: single-paragraph, inline-styled micro-posts shown in full on the home list.
+ * Short posts ("说说"): one paragraph of inline rich text, shown in full on a timeline.
  *
  * Authors:
- * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
- * worryzu <worryzu@gmail.com> @LinearTeam
+ * MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@evarentha.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 /**
- * Shuoshuo micro-post plugin (native Cordis plugin).
+ * <p>Registers the <code>shuoshuo</code> content type (not routable, not in
+ * post lists) and a <code>shuoshuo</code> block renderer. Posting happens in
+ * a composer at the top of the admin page; readers see a /shuoshuo timeline
+ * and a "recent" section on the home page. 3.x records (posts with the
+ * reserved_shuoshuo_ slug prefix) are converted once at startup.</p>
  *
- * <p>Features:</p>
- * <ul>
- * <li>Adds a "shuoshuo" post type: it reuses the posts table with an empty
- * title, a slug under the reserved reserved_shuoshuo_ prefix plus a UUID,
- * and a single-paragraph body (inline text styles only: bold, color, etc.)
- * stored in a block format compatible with modern-editor.</li>
- * <li>The home list shows shuoshuo posts in full (overrides the web/index
- * view) with no reading page; any permalink form that forcibly opens a
- * shuoshuo post returns 404.</li>
- * <li>Provides a dedicated admin management page and a single-paragraph
- * visual editor (inline format toolbar, interactions consistent with
- * modern-editor).</li>
- * <li>Protects the reserved prefix: saving a normal post whose slug
- * collides with the prefix regenerates the slug automatically.</li>
- * </ul>
  * @since 1.0.0
  */
 
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Context } from 'cordis';
-import type { Request, RequestHandler, Response } from 'express';
-import { checkPermission, requireAuth } from '../../services/permission.service.js';
-import type { Post, PostStatus } from '../../types/index.js';
-import { resolvePostParams } from '../../core/permalinks.js';
-import { normalizeShuoShuoBlocks, renderShuoShuoHtml } from './src/render.js';
-import { findShuoShuo, isShuoShuoSlug, listShuoShuo, nextShuoShuoSlug, removeShuoShuo, saveShuoShuo, type ShuoShuoDatabase } from './src/store.js';
+import type { Request, Response } from 'express';
+import { checkPermission, requireAuth, route, parseId, parsePage, pager, messageOf, registerBlock, safeBack } from 'linearpress/plugin-api';
+import type { Post, PostStatus, PostWithAuthor } from 'linearpress/plugin-api';
+import { MAX_TEXT, legacyHtml, normalize, renderHtml, sanitizeInline } from './src/render.js';
 
-const MANAGE_PAGE = '/admin/shuoshuo';
-const EDIT_PAGE = '/admin/shuoshuo/:id/edit';
-const SAVE_URL = '/admin/shuoshuo/save';
-const DELETE_URL = '/admin/shuoshuo/:id/delete';
-const NEW_URL = '/admin/shuoshuo/new';
-const POST_STATUSES: PostStatus[] = ['draft', 'published', 'archived'];
+const PLUGIN_ID = 'shuoshuo';
+const TYPE = 'shuoshuo';
+const VIEWS = path.join(path.dirname(fileURLToPath(import.meta.url)), 'views', PLUGIN_ID);
+const LEGACY_PREFIX = 'reserved_shuoshuo_';
+const PER_PAGE = 20;
 
-function param(value: string | string[]): string { return Array.isArray(value) ? value[0] ?? '' : value; }
-function messageOf(error: unknown): string { return error instanceof Error ? error.message : '操作失败'; }
-const wrap = (fn: (req: Request, res: Response) => Promise<unknown> | unknown): RequestHandler => (req, res, next) => {
-  void Promise.resolve(fn(req, res)).catch((error) => {
-    console.error('[shuoshuo] handler error:', error);
-    if (!res.headersSent) res.status(400).render('error', { title: '说说操作失败', message: messageOf(error) });
-    else next(error);
-  });
-};
-function dbOf(context: Context): ShuoShuoDatabase { return context.databaseService as unknown as ShuoShuoDatabase; }
-function statusOf(value: unknown): PostStatus { return POST_STATUSES.includes(value as PostStatus) ? value as PostStatus : 'draft'; }
+interface Options { homeCount: number; migrated?: number; }
 
-export default function shuoShuo(context: Context): void {
-  const { web, hooks } = context.linearpress;
-  const db = dbOf(context);
+export default async function shuoshuo(ctx: Context): Promise<void> {
+  const { web, ui, admin } = ctx.linearpress;
+  const db = () => ctx.databaseService;
 
-  // Resolve the actual Post before enforcing type; ID and legacy permalinks
-  // must have the same semantics as slug URLs. next() preserves core rendering.
-  const readingGuard: RequestHandler = (req, res, next) => {
-    void (async () => {
-      const site = await context.config.get();
-      const target = resolvePostParams(req.params as Record<string, string | undefined>, site.permalink);
-      const post = target.id ? await context.posts.findById(target.id) : await context.posts.findBySlug(target.slug ?? '');
-      if (post && isShuoShuoSlug(post.slug)) return void res.status(404).render('error', { title: '未找到', message: '文章不存在或尚未发布。' });
-      next();
-    })().catch(next);
-  };
-  for (const path of ['/posts/:slug', '/posts/:first/:slug', '/posts/:MM/:dd/:slug', '/posts/:yyyy/:MM/:dd/:slug', '/post-:slug-page.html', '/post/:slug']) web.register('get', path, readingGuard);
+  ctx.contentTypes.register({ id: TYPE, label: '说说', routable: false, titleRequired: false, listed: false });
+  registerBlock(TYPE, (block) => renderHtml((block as { html?: unknown }).html));
 
-  // ------------------------------------------------------------ 说说管理列表
-  web.register('get', MANAGE_PAGE, requireAuth, checkPermission('post:edit'), wrap(async (_req, res) => {
-    const items = await listShuoShuo(db);
-    res.render('admin/shuoshuo', { title: '说说', items, notice: _req.query.notice ?? '' });
-  }));
-
-  // ------------------------------------------------------------ 新建 / 编辑
-  const blankEditor: RequestHandler = wrap(async (_req, res) => {
-    const slug = await nextShuoShuoSlug(db);
-    res.render('admin/shuoshuo-edit', { title: '发一条说说', shuoshuo: null, slug, status: 'draft', initialHtml: '', cloudSavedAt: 0 });
-  });
-  web.register('get', NEW_URL, requireAuth, checkPermission('post:create'), blankEditor);
-
-  const editEditor: RequestHandler = wrap(async (req, res) => {
-    const row = await findShuoShuo(db, Number(param(req.params.id)));
-    if (!row) return void res.status(404).render('error', { title: '未找到', message: '说说不存在或已被删除。' });
-    res.render('admin/shuoshuo-edit', {
-      title: '编辑说说',
-      shuoshuo: { id: row.id, status: row.status, updated_at: row.updated_at },
-      slug: row.slug,
-      status: row.status,
-      initialHtml: extractParagraphHtml(row.content_json),
-      cloudSavedAt: row.updated_at ? Date.parse(row.updated_at) || 0 : 0
-    });
-  });
-  web.register('get', EDIT_PAGE, requireAuth, checkPermission('post:edit'), editEditor);
-
-  // ------------------------------------------------------------ 保存
-  web.register('post', SAVE_URL, requireAuth, wrap(async (req, res) => {
-    const id = Number(req.body.id) || undefined;
-    const permission = id ? 'post:edit' : 'post:create';
-    if (!await context.permissions.has(req.session.userId!, permission)) {
-      return void res.status(403).render('error', { title: '权限不足', message: '你没有执行此操作的权限。' });
+  let options: Options = { homeCount: 3, ...(await ctx.plugins.getConfig<Partial<Options>>(PLUGIN_ID) ?? {}) };
+  if (!options.migrated) {
+    const legacy = await db().all<{ id: number; content_json: string }>(`SELECT id, content_json FROM posts WHERE post_type = 'post' AND SUBSTR(slug, 1, ${LEGACY_PREFIX.length}) = ?`, LEGACY_PREFIX);
+    for (const row of legacy) {
+      let blocks: unknown = [];
+      try { blocks = JSON.parse(row.content_json); } catch { /* keep empty */ }
+      await db().run('UPDATE posts SET post_type = ?, content_json = ?, html_cache = NULL WHERE id = ?', TYPE, JSON.stringify([{ type: TYPE, html: legacyHtml(blocks) }]), row.id);
     }
-    let blocks: unknown;
-    try { blocks = JSON.parse(String(req.body.content_json ?? '[]')); }
-    catch { return void res.status(400).render('error', { title: '内容无效', message: '说说内容格式无法解析。' }); }
-    const html = normalizeShuoShuoBlocks(blocks);
-    let slug = String(req.body.slug ?? '');
-    // 编辑器会附带隐藏 slug；缺失或非法时（如直接 API 调用）自动生成保留前缀 slug。
-    if (!isShuoShuoSlug(slug)) slug = await nextShuoShuoSlug(db);
-    await saveShuoShuo(db, context.posts, { id, slug, html, status: statusOf(req.body.status), authorId: req.session.userId! });
-    res.redirect(`${MANAGE_PAGE}?notice=saved`);
+    options = { ...options, migrated: 1 };
+    await ctx.plugins.setConfig(PLUGIN_ID, options);
+    if (legacy.length) ctx.logger.info(`converted ${legacy.length} shuoshuo from 3.x`);
+  }
+
+  const htmlOf = (post: Post) => String((post.content_json.find((block) => block.type === TYPE) as { html?: unknown } | undefined)?.html ?? '');
+  const prepare = async (posts: PostWithAuthor[]) => Promise.all(posts.map(async (post) => ({ ...post, html: await ctx.posts.render(post) })));
+  const find = async (id: number | undefined) => { const post = id ? await ctx.posts.findById(id) : undefined; return post?.post_type === TYPE ? post : undefined; };
+
+  async function save(req: Request, input: { id?: number; html: unknown; status: PostStatus }): Promise<Post> {
+    const existing = await find(input.id);
+    if (input.id && !existing) throw new Error('这条说说已不存在');
+    const html = normalize(input.html);
+    return ctx.posts.save({
+      id: existing?.id, type: TYPE, title: '', slug: existing?.slug ?? `shuoshuo-${crypto.randomBytes(6).toString('hex')}`,
+      blocks: [{ type: TYPE, html } as never], status: input.status, authorId: existing?.author_id ?? req.session.userId!
+    });
+  }
+
+  /* ---------- admin ---------- */
+  admin.registerMenu({ title: '说说', link: '/admin/shuoshuo', group: 'content', order: 15, permission: 'post:create' });
+  web.register('get', '/admin/shuoshuo', requireAuth, checkPermission('post:create'), route(async (req, res) => {
+    const status = (['published', 'draft'] as const).find((value) => value === req.query.status);
+    const total = await ctx.posts.count({ type: TYPE, status });
+    const pages = pager(total, parsePage(req.query.page), PER_PAGE, '/admin/shuoshuo', { status });
+    const items = await prepare(await ctx.posts.list({ type: TYPE, status, limit: pages.perPage, offset: pages.offset }));
+    const editing = await find(parseId(req.query.edit));
+    const draft = req.session.shuoshuoDraft; req.session.shuoshuoDraft = undefined;
+    const [published, drafts] = await Promise.all([ctx.posts.count({ type: TYPE, status: 'published' }), ctx.posts.count({ type: TYPE, status: 'draft' })]);
+    res.render(`${PLUGIN_ID}/admin`, {
+      pageTitle: '说说', items, pager: pages, status: status ?? '', counts: { all: published + drafts, published, drafts },
+      composer: { id: editing?.id ?? '', html: sanitizeInline(draft?.html ?? (editing ? htmlOf(editing) : '')), error: draft?.error ?? '', status: editing?.status ?? 'draft' },
+      maxText: MAX_TEXT, options,
+      can: { delete: Boolean(await ctx.permissions.has(req.session.userId!, 'post:delete')) }
+    });
+  }));
+  web.register('post', '/admin/shuoshuo/save', requireAuth, checkPermission('post:create'), route(async (req, res) => {
+    const id = parseId(req.body.id);
+    if (id && !await ctx.permissions.has(req.session.userId!, 'post:edit')) return void res.status(403).render('error', { pageTitle: '没有权限', title: '没有权限', message: '你没有编辑说说的权限。', code: 403 });
+    const status: PostStatus = req.body.intent === 'draft' ? 'draft' : 'published';
+    try {
+      await save(req, { id, html: req.body.html, status });
+      req.flash('success', status === 'published' ? (id ? '说说已更新' : '说说已发布') : '已存为草稿');
+      res.redirect(303, '/admin/shuoshuo');
+    } catch (error) {
+      req.session.shuoshuoDraft = { html: String(req.body.html ?? ''), error: messageOf(error) };
+      res.redirect(303, id ? `/admin/shuoshuo?edit=${id}#composer` : '/admin/shuoshuo#composer');
+    }
+  }));
+  web.register('post', '/admin/shuoshuo/:id/delete', requireAuth, checkPermission('post:delete'), route(async (req, res) => {
+    const post = await find(parseId(req.params.id));
+    if (post) { await ctx.posts.remove(post.id); req.flash('success', '已删除这条说说'); }
+    else req.flash('warning', '这条说说已不存在');
+    res.redirect(303, safeBack(req.body.back, '/admin/shuoshuo'));
+  }));
+  web.register('post', '/admin/shuoshuo/options', requireAuth, checkPermission('admin:access'), route(async (req, res) => {
+    options = { ...options, homeCount: Math.min(10, Math.max(0, Math.floor(Number(req.body.homeCount)) || 0)) };
+    await ctx.plugins.setConfig(PLUGIN_ID, options);
+    req.flash('success', options.homeCount ? `首页会显示最近 ${options.homeCount} 条说说` : '首页不再显示说说');
+    res.redirect(303, '/admin/shuoshuo');
   }));
 
-  // ------------------------------------------------------------ 删除
-  web.register('post', DELETE_URL, requireAuth, checkPermission('post:delete'), wrap(async (req, res) => {
-    await removeShuoShuo(db, context.posts, Number(param(req.params.id)));
-    res.redirect(`${MANAGE_PAGE}?notice=deleted`);
+  /* ---------- public ---------- */
+  ui.menu('web.nav', { title: '说说', href: '/shuoshuo', order: 20 });
+  web.register('get', '/shuoshuo', route(async (req: Request, res: Response) => {
+    const total = await ctx.posts.count({ type: TYPE, status: 'published' });
+    const pages = pager(total, parsePage(req.query.page), PER_PAGE, '/shuoshuo');
+    const items = await prepare(await ctx.posts.list({ type: TYPE, status: 'published', limit: pages.perPage, offset: pages.offset }));
+    res.render(`${PLUGIN_ID}/timeline`, { pageTitle: '说说', items, pager: pages, total });
   }));
-
-  // ------------------------------------------------------------ 后台扩展
-  hooks.on('admin:menu', (menu: Array<{ title: string; link: string }>) => [...menu, { title: '说说', link: MANAGE_PAGE }], { priority: 5 });
-
-  // 视图辅助：前端列表 / 后台列表直接渲染说说正文（覆盖视图中使用）。
-  hooks.on('site:locals', (locals: Record<string, unknown>) => ({
-    ...locals,
-    isShuoShuo: (value: string | null | undefined) => isShuoShuoSlug(value),
-    shuoshuoHtml: (post: Post) => renderShuoShuoHtml(post?.content_json)
-  }));
-
-  // 保留前缀保护：普通文章保存时若 slug 撞保留前缀，交给系统按标题重新生成。
-  hooks.on('post:beforeSave', async (draft) => {
-    const existing = draft.id ? await context.posts.findById(draft.id) : undefined;
-    // Type changes are never an accidental side effect of quick editing.
-    if (existing && isShuoShuoSlug(existing.slug)) return { ...draft, title: existing.title, slug: existing.slug };
-    if ((draft as Post & { postType?: string }).postType === 'shuoshuo') return draft;
-    return isShuoShuoSlug(String(draft.slug ?? '')) ? { ...draft, slug: '' } : draft;
+  ui.slot('home.before-latest', {
+    match: (req) => req.path === '/' && options.homeCount > 0,
+    prepare: async () => {
+      const posts = await ctx.posts.list({ type: TYPE, status: 'published', limit: options.homeCount });
+      return { items: await prepare(posts), total: await ctx.posts.count({ type: TYPE, status: 'published' }) };
+    },
+    view: path.join(VIEWS, 'home.ejs')
   });
-
-  context.logger.info('activated');
+  ctx.logger.info('activated');
 }
 
-/** 从 content_json 提取说说段落内部 HTML（净化后，不含外层 <p>）。 */
-function extractParagraphHtml(contentJson: unknown): string {
-  try {
-    const blocks = typeof contentJson === 'string' ? JSON.parse(contentJson) : contentJson;
-    const html = normalizeShuoShuoBlocks(blocks);
-    return html.replace(/^<p[^>]*>|<\/p>$/gi, '');
-  } catch {
-    // 已存在但格式异常的历史数据：编辑页允许空白内容，保存时再校验。
-    return '';
-  }
+declare module 'express-session' {
+  interface SessionData { shuoshuoDraft?: { html: string; error: string }; }
 }

@@ -1,0 +1,78 @@
+<%#
+  Shuoshuo · admin page: composer on top (new or editing), then the list.
+
+  Authors:
+  MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+  worryzu <worryzu@evarentha.com> @LinearTeam
+
+  Copyright (C) 2026 Evarentha
+  SPDX-License-Identifier: GPL-3.0-or-later
+%><div class="stack" data-lp-plugin="shuoshuo">
+  <div class="page-header">
+    <div><h1>说说</h1><p>随手记下的一段话：只有一个段落，没有标题，在“说说”页面和首页完整显示。</p></div>
+    <% if (siteConfig) { %><div class="actions"><a class="btn" href="/shuoshuo" target="_blank" rel="noopener">查看说说页 ↗</a></div><% } %>
+  </div>
+
+  <form class="card ss-composer<%= composer.error ? ' has-error' : '' %>" id="composer" method="post" action="/admin/shuoshuo/save" data-ss-composer data-dirty-guard>
+    <input type="hidden" name="id" value="<%= composer.id %>">
+    <input type="hidden" name="html" data-ss-html>
+    <div class="ss-head">
+      <%- avatar(currentUser, 32) %>
+      <strong><%= composer.id ? '编辑说说' : displayName(currentUser) %></strong>
+      <% if (composer.id) { %><span class="badge badge-<%= composer.status %>"><%= composer.status === 'published' ? '已发布' : '草稿' %></span><% } %>
+    </div>
+    <div class="ss-toolbar" role="toolbar" aria-label="文字格式">
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="bold" title="加粗（Ctrl+B）" aria-label="加粗"><strong>B</strong></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="italic" title="斜体（Ctrl+I）" aria-label="斜体"><em>I</em></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="strikeThrough" title="删除线" aria-label="删除线"><s>S</s></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="mark" title="高亮" aria-label="高亮"><mark>高亮</mark></button>
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="link" title="链接" aria-label="插入链接">链接</button>
+      <button type="button" class="btn btn-ghost btn-sm" data-cmd="clear" title="清除格式" aria-label="清除格式">清除格式</button>
+    </div>
+    <div class="ss-editable" contenteditable="true" role="textbox" aria-multiline="true" aria-label="说说内容" data-placeholder="这一刻的想法…" data-ss-editable<%- composer.error ? ' aria-invalid="true" aria-describedby="ss-error"' : '' %>><%- composer.html %></div>
+    <% if (composer.error) { %><p class="error" id="ss-error"><%= composer.error %></p><% } %>
+    <div class="ss-foot">
+      <span class="muted num" data-ss-count data-max="<%= maxText %>" aria-live="polite"></span>
+      <span class="spacer"></span>
+      <% if (composer.id) { %><a class="btn btn-ghost" href="/admin/shuoshuo">取消编辑</a><% } %>
+      <button class="btn" type="submit" name="intent" value="draft">存草稿</button>
+      <button class="btn btn-primary" type="submit" name="intent" value="publish"><%= composer.id && composer.status === 'published' ? '更新' : '发布' %></button>
+    </div>
+  </form>
+
+  <nav class="tabs" aria-label="按状态筛选">
+    <a href="/admin/shuoshuo"<%- !status ? ' aria-current="page"' : '' %>>全部<span class="count"><%= counts.all %></span></a>
+    <a href="/admin/shuoshuo?status=published"<%- status === 'published' ? ' aria-current="page"' : '' %>>已发布<span class="count"><%= counts.published %></span></a>
+    <a href="/admin/shuoshuo?status=draft"<%- status === 'draft' ? ' aria-current="page"' : '' %>>草稿<span class="count"><%= counts.drafts %></span></a>
+  </nav>
+
+  <% if (items.length) { %>
+  <ol class="ss-list">
+    <% for (const item of items) { %>
+    <li class="card ss-item" id="s-<%= item.id %>">
+      <div class="ss-meta">
+        <span><%= displayName({ id: item.author_id, username: item.author_name }) %></span>
+        <time class="dot" datetime="<%= isoTime(item.created_at) %>" title="<%= formatDate(item.created_at) %>"><%= formatRelative(item.created_at) %></time>
+        <% if (item.status !== 'published') { %><span class="badge badge-<%= item.status %>">草稿</span><% } %>
+        <span class="spacer"></span>
+        <span class="row-actions">
+          <a href="/admin/shuoshuo?edit=<%= item.id %>#composer">编辑</a>
+          <% if (can.delete) { %><form method="post" action="/admin/shuoshuo/<%= item.id %>/delete" data-confirm="这条说说将被永久删除。" data-confirm-title="删除说说" data-confirm-text="删除" data-confirm-danger><input type="hidden" name="back" value="<%= pager.url(pager.page) %>"><button class="btn-link" type="submit" style="color:var(--lp-danger)">删除</button></form><% } %>
+        </span>
+      </div>
+      <div class="ss-body"><%- item.html %></div>
+    </li>
+    <% } %>
+  </ol>
+  <%- include('partials/pagination', { pager }) %>
+  <% } else { %>
+  <div class="card"><%- include('partials/empty', { title: status === 'draft' ? '没有草稿' : '还没有说说', text: status ? '' : '在上面写下第一条吧。', icon: 'doc' }) %></div>
+  <% } %>
+
+  <form class="card ss-options" method="post" action="/admin/shuoshuo/options">
+    <label for="ss-home-count">首页显示最近</label>
+    <input class="input" id="ss-home-count" name="homeCount" type="number" min="0" max="10" value="<%= options.homeCount %>">
+    <span>条说说（0 表示不显示）</span>
+    <button class="btn btn-sm" type="submit">保存</button>
+  </form>
+</div>

@@ -1,63 +1,49 @@
 /*
  * Shuoshuo Styles
  *
- * Styles for shuoshuo rows on the home list, the admin table, and the single-paragraph editor page.
+ * Composer, admin list, public timeline and the home section; built on the core tokens.
  *
  * Authors:
- * MoyuZJ <moyuzj@moyuzj.cn> @LinearTeam - Made in China with ♥
- * worryzu <worryzu@gmail.com> @LinearTeam
+ * MoyuZJ <moyuzj@evarentha.com> @LinearTeam - Made in China with ♥
+ * worryzu <worryzu@evarentha.com> @LinearTeam
  *
  * Copyright (C) 2026 Evarentha
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-/*
- * Covers the full-text shuoshuo rows on the home list, the shuoshuo cells
- * and tags in the admin tables, and the editor page: sticky top bar,
- * compose card, meta row, and the floating format toolbar that appears on
- * text selection.
- * @since 1.0.0
- */
+/* shared */
+[data-lp-plugin="shuoshuo"] .ss-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--lp-text-3); font-size: var(--lp-text-sm); }
+[data-lp-plugin="shuoshuo"] .ss-meta a { color: inherit; }
+[data-lp-plugin="shuoshuo"] .ss-meta .dot::before { content: "·"; margin-right: 12px; color: var(--lp-border-strong); }
+[data-lp-plugin="shuoshuo"] .shuoshuo-text { margin: 0; white-space: normal; overflow-wrap: anywhere; }
+[data-lp-plugin="shuoshuo"] .shuoshuo-text a { color: var(--lp-accent); }
+[data-lp-plugin="shuoshuo"] .shuoshuo-text mark, [data-lp-plugin="shuoshuo"] .shuoshuo-text span[style*="background"] { border-radius: 2px; padding: 0 2px; }
 
-/* ----------------------------------------------------------- 前台列表 */
-.shuoshuo-row{display:block;align-items:normal}
-.shuoshuo-row .shuoshuo-main{width:100%}
-.shuoshuo-badge{display:inline-block;border:1px solid #1a1a1a;padding:2px 8px;font:10px Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;margin-right:10px;vertical-align:1px}
-.shuoshuo-body{padding:14px 0 2px}
-.shuoshuo-paragraph{font-size:26px;line-height:1.5;margin:0;max-width:860px}
-.shuoshuo-paragraph br{content:'';display:block;margin:6px 0}
-@media(max-width:650px){.shuoshuo-paragraph{font-size:20px}}
+/* public timeline */
+[data-lp-plugin="shuoshuo"] .ss-timeline { list-style: none; margin: var(--lp-space-6) 0 0; padding: 0; display: grid; }
+[data-lp-plugin="shuoshuo"] .ss-timeline > li { position: relative; display: grid; gap: var(--lp-space-2); padding: var(--lp-space-5) 0 var(--lp-space-5) var(--lp-space-6); border-left: 2px solid var(--lp-border); }
+[data-lp-plugin="shuoshuo"] .ss-timeline > li::before { content: ""; position: absolute; left: -6px; top: calc(var(--lp-space-5) + 6px); width: 10px; height: 10px; border-radius: 50%; background: var(--lp-surface); border: 2px solid var(--lp-accent); }
+[data-lp-plugin="shuoshuo"] .ss-timeline .shuoshuo-text { font-size: 17px; line-height: 1.85; color: var(--lp-text); }
+[data-lp-plugin="shuoshuo"] .ss-author { color: var(--lp-text-2); font-weight: 500; }
+[data-lp-plugin="shuoshuo"].ss-home .ss-timeline { margin-top: var(--lp-space-2); }
+[data-lp-plugin="shuoshuo"] .ss-compact > li { padding-top: var(--lp-space-3); padding-bottom: var(--lp-space-3); }
+[data-lp-plugin="shuoshuo"] .ss-compact > li::before { top: calc(var(--lp-space-3) + 7px); }
+[data-lp-plugin="shuoshuo"] .ss-compact .shuoshuo-text { font-size: var(--lp-text-base); line-height: 1.75; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+[data-lp-plugin="shuoshuo"].ss-home { margin-bottom: var(--lp-space-10); }
 
-/* ----------------------------------------------------------- 后台列表 */
-.shuoshuo-tag{display:inline-block;background:#1a1a1a;color:#fff;padding:3px 9px;font-size:10px;letter-spacing:.14em;text-transform:uppercase}
-.shuoshuo-cell{max-width:520px}
-.shuoshuo-cell .shuoshuo-body{padding:0}
-.shuoshuo-cell .shuoshuo-paragraph{font-size:14px;line-height:1.6;color:#333;font-family:Arial,sans-serif}
-td.empty{color:#777;font-size:12px;text-align:center;padding:34px}
-
-/* ----------------------------------------------------------- 说说编辑器 */
-.shuoshuo-editor-page{position:relative;min-height:70vh}
-#shuoshuo-form{display:block}
-.shuoshuo-topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:18px;background:#f5f5f3;padding:16px 0;border-bottom:1px solid #d7d7d7}
-.shuoshuo-topbar-left{display:flex;align-items:center;gap:16px}
-.shuoshuo-back{font:28px Arial,sans-serif;text-decoration:none;color:#1a1a1a;line-height:1}
-.shuoshuo-save-status{font-size:11px;letter-spacing:.1em;color:#6d6d6d;text-transform:uppercase}
-.shuoshuo-actions{display:flex;gap:10px}
-.shuoshuo-draft-button{background:none;color:#1a1a1a;text-decoration:none;border:1px solid #1a1a1a;padding:12px 16px;cursor:pointer;font:12px Arial,sans-serif;letter-spacing:.06em}
-.shuoshuo-publish-button{display:inline-flex;align-items:center;justify-content:center;background:#1a1a1a;color:#fff;border:0;padding:13px 17px;cursor:pointer;font:13px Arial,sans-serif}
-.shuoshuo-canvas{padding:46px 0 80px}
-.shuoshuo-compose{background:#fff;border:1px solid #d7d7d7;padding:clamp(28px,6vw,64px)}
-.shuoshuo-editable{outline:none;font:400 clamp(24px,4.5vw,42px) Georgia,serif;line-height:1.5;min-height:1.6em;margin:0;color:#1a1a1a}
-.shuoshuo-editable:empty::before{content:attr(data-placeholder);color:#b5b5b0}
-.shuoshuo-meta-row{margin-top:18px;font:11px Arial,sans-serif;letter-spacing:.1em;color:#8f8f89;display:flex;gap:10px;align-items:center;text-transform:uppercase}
-
-/* 浮动格式工具栏（选中文本时出现） */
-.shuoshuo-format-bar{position:fixed;z-index:90;display:flex;align-items:center;gap:2px;padding:6px;background:#1a1a1a;border-radius:8px;opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .15s ease,transform .15s ease;box-shadow:0 8px 26px rgba(0,0,0,.28)}
-.shuoshuo-format-bar.is-visible{opacity:1;pointer-events:auto;transform:translateY(0)}
-.shuoshuo-format-bar button{border:0;background:none;color:#fff;text-decoration:none;cursor:pointer;font:13px Arial,sans-serif;min-width:30px;height:30px;padding:0 6px;border-radius:5px}
-.shuoshuo-format-bar button:hover{background:#333}
-.shuoshuo-format-bar label{position:relative;display:inline-flex;align-items:center;color:#fff;font:12px Arial,sans-serif;height:30px;margin-left:4px;padding:0 6px;cursor:pointer}
-.shuoshuo-format-bar label input[type="color"]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
-.shuoshuo-format-bar label::after{content:'';position:absolute;left:50%;bottom:2px;width:12px;height:3px;transform:translateX(-50%);background:currentColor}
-
-@media(max-width:650px){.shuoshuo-canvas{padding:28px 0 60px}.shuoshuo-compose{padding:24px 18px}.shuoshuo-editable{font-size:22px}}
+/* admin composer and list */
+[data-lp-plugin="shuoshuo"] .ss-composer { display: grid; gap: var(--lp-space-3); }
+[data-lp-plugin="shuoshuo"] .ss-head { display: flex; align-items: center; gap: var(--lp-space-2); }
+[data-lp-plugin="shuoshuo"] .ss-toolbar { display: flex; flex-wrap: wrap; gap: 2px; padding-bottom: var(--lp-space-2); border-bottom: 1px solid var(--lp-border); }
+[data-lp-plugin="shuoshuo"] .ss-editable { min-height: 96px; max-height: 50vh; overflow-y: auto; padding: var(--lp-space-2) 0; font-size: 16px; line-height: 1.8; outline: none; overflow-wrap: anywhere; }
+[data-lp-plugin="shuoshuo"] .ss-editable:empty::before { content: attr(data-placeholder); color: var(--lp-text-3); }
+[data-lp-plugin="shuoshuo"] .ss-editable a { color: var(--lp-accent); }
+[data-lp-plugin="shuoshuo"] .ss-composer:focus-within { border-color: var(--lp-accent); box-shadow: 0 0 0 3px var(--lp-accent-soft); }
+[data-lp-plugin="shuoshuo"] .ss-composer.has-error { border-color: var(--lp-danger); }
+[data-lp-plugin="shuoshuo"] .ss-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lp-space-2); }
+[data-lp-plugin="shuoshuo"] [data-ss-count].is-over { color: var(--lp-danger); font-weight: 500; }
+[data-lp-plugin="shuoshuo"] .ss-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--lp-space-3); }
+[data-lp-plugin="shuoshuo"] .ss-item { display: grid; gap: var(--lp-space-2); }
+[data-lp-plugin="shuoshuo"] .ss-item .ss-body { font-size: 15px; line-height: 1.8; }
+[data-lp-plugin="shuoshuo"] .ss-options { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lp-space-2); font-size: var(--lp-text-sm); color: var(--lp-text-2); }
+[data-lp-plugin="shuoshuo"] .ss-options input { width: 72px; }
