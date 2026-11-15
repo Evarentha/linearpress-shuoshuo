@@ -1,7 +1,7 @@
 {
   "name": "@evarentha/linearpress-shuoshuo",
-  "version": "3.0.0",
-  "description": "一种只有一段话的文章类型：只允许单个段落与行内文本样式（加粗、颜色等），列表页直接展示全文，不可进入阅读页，固定链接使用保留前缀 reserved_shuoshuo_。",
+  "version": "4.0.0",
+  "description": "随手发一段话：没有标题、只有一个段落，支持加粗、高亮和链接；在“说说”页面以时间线展示，首页显示最近几条。",
   "type": "module",
   "main": "index.ts",
   "license": "GPL-3.0-or-later",
@@ -20,7 +20,7 @@
     "node": ">=22.0.0"
   },
   "peerDependencies": {
-    "linearpress": "^3.0.0"
+    "linearpress": "^4.0.0"
   },
   "publishConfig": {
     "access": "public"
